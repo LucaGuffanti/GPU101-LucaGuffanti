@@ -1,6 +1,6 @@
 ## Introduction
 <p align="justify">
-This repository contains both the code and the report for Politectino di Milano's Passion in Action course *GPU 101*.
+This repository contains both the code and the report for Politecnico di Milano Passion in Action course GPU101.
 </p>
 
 ### Where can I find the material
@@ -9,7 +9,11 @@ following link
 https://tinyurl.com/gpumatrix
 
 ## How to get this repository
-You can either download the code or type # in a terminal supporting git.
+You can either download the code or type
+```
+git clone https://github.com/LucaGuffanti/GPU101-LucaGuffanti
+```
+in a terminal supporting git.
 
 ## Compilation
 
@@ -25,6 +29,6 @@ To run the code simply type the following command and wait for the execution.
 ```
 ./spmv/spmv-gpu path_to_matrix num_of_threads
 ```
-The execution first steps are pretty slow, as the matrix must be firstly read and stored in memory, so be aware that executing the code may take some time.
+The first steps of the execution are pretty slow, as the matrix must be firstly read and stored in memory. Be aware that executing the code may take some time.
 
 
