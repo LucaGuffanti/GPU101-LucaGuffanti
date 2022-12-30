@@ -1,10 +1,10 @@
-CC 			=	gcc
-CFLAGS		=	-O3 -Wunused-result
-PROG		=	spmv/spmv-test
+CC 			=	nvcc
+CFLAGS		=	-O3
+PROG		=	spmv/spmv-gpu
 
 all:$(PROG)
 
-spmv/spmv-test: spmv/spmv-csr.c
+spmv/spmv-gpu: spmv/spmv_gpu.cu
 	$(CC) $(CFLAGS) $^ -o $@ 
 
 .PHONY:clean
