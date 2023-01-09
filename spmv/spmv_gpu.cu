@@ -71,7 +71,7 @@ void read_matrix(int **row_ptr, int **col_ind, float **values, const char *filen
         row_ptr_t[i] = index;
         index += row_occurances[i];
     }
-    row_ptr_t[*num_rows] = *num_vals;
+    row_ptr_t[*num_rows] = (*num_vals) - 1;
     free(row_occurances);
     
     printf("row_ptr array ready\n");
@@ -143,21 +143,37 @@ void check_results(const float *a1, const float *a2, const int rows) {
 
 
 __global__ void spmv_csr_gpu(const int *row_ptr, const int *col_ind, const float *values, const int num_rows, const float *d_x, float *y, const int num_threads) {
-    
-    int single_thread_id = threadIdx.x + blockIdx.x * blockDim.x;
-    
-    for(int index = single_thread_id; index < num_rows; index = index + num_threads) {
-        
-        float dot_product = 0;
-        int row_start = row_ptr[index];
-        int row_end = row_ptr[index+1];
-
-        for(int j = row_start; j < row_end; j++) {
-            dot_product += values[j] * d_x[col_ind[j]];
-        }
-
-        y[index] = dot_product;
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
+    int index;
+    int lower;
+    int upper;
+    int i;
+    float val;
+    i = 0;
+    index = id; 
+    while(index < num_rows) {
+      if(id == 0)
+        printf("iteration %d\n", i);
+      val = 0;
+      lower = row_ptr[index];
+      upper = row_ptr[index+1];
+      for(int j = lower; j < upper; j++) {
+        val += values[j]*d_x[col_ind[j]];
+      }
+      i++;
+      y[index] = val;
+      index = id + num_threads*i;
     }
+    /*if(id == 0) {
+      printf("done cycle\n");
+      val = 0;
+      lower = row_ptr[num_rows-1];
+      upper = row_ptr[num_rows];
+      for(int j = lower; j < upper-1; j++) {
+        val += values[j]*d_x[col_ind[j]];
+      }
+      y[num_rows-1] = val;
+    }*/
 }
 
 
@@ -181,7 +197,7 @@ int main(int argc, const char * argv[]) {
     
     const char *filename = argv[1];
     const int num_threads = atoi(argv[2]);
-
+    printf("selected %d threads\n", num_threads);
     double start_cpu, end_cpu;
     double start_gpu, end_gpu;
     
@@ -197,7 +213,8 @@ int main(int argc, const char * argv[]) {
     CHECK(cudaMalloc(&d_row_ptr, (num_rows + 1) * sizeof(int)));
     CHECK(cudaMalloc(&d_col_ind, num_vals * sizeof(int)));
     CHECK(cudaMalloc(&d_values, num_vals * sizeof(float)));
-    CHECK(cudaMalloc(&d_y, (num_rows + 1) * sizeof(float)));
+    CHECK(cudaMalloc(&d_y, (num_rows) * sizeof(float)));
+    CHECK(cudaMalloc(&d_x, (num_rows) * sizeof(float)));
 
     // Generate a random vector
 
@@ -206,8 +223,6 @@ int main(int argc, const char * argv[]) {
     for (int i = 0; i < num_rows; i++) {
         x[i] = (rand()%100)/(rand()%100+1); //the number we use to divide cannot be 0, that's the reason of the +1
     }
-    
-    CHECK(cudaMalloc(&d_x, (num_rows + 1) * sizeof(float)));
 
     // Copying data from cpu to gpu
 
@@ -215,7 +230,7 @@ int main(int argc, const char * argv[]) {
     CHECK(cudaMemcpy(d_row_ptr, row_ptr, (num_rows + 1) * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_col_ind, col_ind, num_vals * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_values, values, num_vals * sizeof(float), cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(d_x, x, (num_rows + 1) * sizeof(float), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_x, x, (num_rows) * sizeof(float), cudaMemcpyHostToDevice));
 
     // Compute in GPU
 
